@@ -2,6 +2,15 @@ receivers:
   otlp:
     protocols:
       grpc:
+      http:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'sample-app'
+          static_configs:
+            - targets: ['sample-app:8081']
+processors:
+  batch:
 
 exporters:
   jaeger:
@@ -11,9 +20,6 @@ exporters:
   prometheus:
     endpoint: "0.0.0.0:8888"
 
-processors:
-  batch:
-
 service:
   pipelines:
     traces:
@@ -21,6 +27,6 @@ service:
       processors: [batch]
       exporters: [jaeger]
     metrics:
-      receivers: []
+      receivers: [otlp, prometheus]
       processors: []
       exporters: [prometheus]
