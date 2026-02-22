@@ -7,6 +7,8 @@ services:
     ports:
       - "9090:9090"
     restart: unless-stopped
+    networks:
+      - monitoring
 
   grafana:
     image: grafana/grafana:latest
@@ -17,6 +19,8 @@ services:
     depends_on:
       - prometheus
     restart: unless-stopped
+    networks:
+      - monitoring
 
   jaeger:
     image: jaegertracing/all-in-one:1.41
@@ -25,6 +29,8 @@ services:
       - "14268:14268"
       - "14250:14250"
     restart: unless-stopped
+    networks:
+      - monitoring
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.79.0
@@ -33,10 +39,12 @@ services:
     command: ["--config", "/etc/otel-collector/config.yml"]
     ports:
       - "4317:4317"    # OTLP gRPC for apps
-      - "8888:8888"    # Prometheus scrape endpoint exposed by collector (metrics)
+      - "8889:8889"    # Prometheus scrape endpoint exposed by collector (metrics)
     depends_on:
       - jaeger
     restart: unless-stopped
+    networks:
+      - monitoring
 
   postgres:
     image: postgres:13
@@ -50,6 +58,8 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./initdb:/docker-entrypoint-initdb.d:ro
     restart: unless-stopped
+    networks:
+      - monitoring
 
   artemis:
     image: apache/activemq-artemis:latest
@@ -66,6 +76,8 @@ services:
       nofile:
         soft: 65535
         hard: 65535
+    networks:
+      - monitoring
 
   sample-app:
     build:
@@ -76,8 +88,14 @@ services:
       - SPRING_DATASOURCE_USERNAME=app
       - SPRING_DATASOURCE_PASSWORD=pass
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc  
       - OTEL_RESOURCE_ATTRIBUTES=service.name=sample-app,service.version=0.1.0
       - JAVA_OPTS=-Dspring.profiles.active=default
+      - SPRING_ARTEMIS_MODE=native
+      - SPRING_ARTEMIS_HOST=artemis
+      - SPRING_ARTEMIS_PORT=61616
+      - SPRING_ARTEMIS_USER=admin
+      - SPRING_ARTEMIS_PASSWORD=admin
     ports:
       - "8081:8081"
     depends_on:
@@ -85,6 +103,12 @@ services:
       - artemis
       - otel-collector
     restart: unless-stopped
+    networks:
+      - monitoring
 
 volumes:
   pgdata:
+
+networks:
+  monitoring:
+    driver: bridge

@@ -21,6 +21,6 @@ public class NewOrderUseCase {
 	public void newOrder(Map<String, Object> order) {
 
 		jdbc.update("insert into orders(id,info) values(nextval('orders_seq'), ?)", order.toString());
-		jms.convertAndSend("orders.queue", order);
+		jms.convertAndSend("orders.queue", order.toString());
 	}
 }
